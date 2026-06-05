@@ -39,6 +39,7 @@
     border-bottom:3px solid transparent;transition:all 0.2s;text-transform:uppercase}
   nav button:hover{color:var(--cream)}
   nav button.active{color:var(--gold);border-bottom-color:var(--gold)}
+  nav button.nav-hidden{display:none !important;}
 
   main{max-width:1100px;margin:0 auto;padding:1.8rem 1.5rem 4rem}
   .page{display:none}
@@ -224,8 +225,8 @@
 </header>
 
 <nav>
-  <button class="active" onclick="showPage('vnos')">+ Vnos</button>
-  <button onclick="showPage('tretiranja')">📋 Tretiranja</button>
+  <button id="nav-vnos" class="nav-hidden" onclick="showPage('vnos')">+ Vnos</button>
+  <button class="active" onclick="showPage('tretiranja')">📋 Tretiranja</button>
   <button onclick="showPage('zaloga')">📦 Zaloga</button>
   <button onclick="showPage('skropiva')">⚙ Škropiva</button>
 </nav>
@@ -493,12 +494,14 @@ function zalogaStatus(skr) {
 function nextId() { return Math.max(0,...state.skropiva.map(s=>s.id))+1; }
 
 // ── NAV ──────────────────────────────────────────────
-const PAGES = ['vnos','tretiranja','zaloga','skropiva'];
+const PAGES = ['vnos','tretiranja','zaloga','skropiva']; // nav buttons: 0=vnos,1=tret,2=zaloga,3=skropiva
 window.showPage = function(name) {
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
-  document.querySelectorAll('nav button')[PAGES.indexOf(name)].classList.add('active');
+  const navBtns = document.querySelectorAll('nav button');
+  // map page name to nav button index (vnos=0, tretiranja=1, zaloga=2, skropiva=3)
+  navBtns[PAGES.indexOf(name)].classList.add('active');
   if(name==='tretiranja') renderTretiranja();
   if(name==='zaloga')     renderZaloga();
   if(name==='skropiva')   renderSkropiva();
@@ -511,6 +514,8 @@ function initVnos() {
   document.getElementById('vnos-ura').value   = new Date().toTimeString().slice(0,5);
   dodajVrstico(); // start with one empty row
   renderQuickStats();
+  // start on tretiranja page (vnos is locked by default)
+  showPage('tretiranja');
 }
 
 // ── Mešanica vrstice ─────────────────────────────────
@@ -840,20 +845,18 @@ function applyLockState() {
     document.querySelector('#page-skropiva .card div[style*="margin-top:1rem"]'),
     document.getElementById('skropiva-list'),
   ];
+  const vnosBtn = document.getElementById('nav-vnos');
   if (isUnlocked) {
     btn.textContent = '🔓 Zakleni';
     btn.classList.add('unlocked');
     status.textContent = '✏️ Način urejanja';
-    // remove locked overlays
+    vnosBtn.classList.remove('nav-hidden');
     document.querySelectorAll('.locked-overlay').forEach(el=>el.classList.remove('locked-overlay'));
-    // show vnos tab
-    document.querySelectorAll('nav button')[0].style.display = '';
   } else {
     btn.textContent = '🔒 Uredi';
     btn.classList.remove('unlocked');
     status.textContent = '👁 Način ogleda';
-    // hide vnos tab, redirect if on it
-    document.querySelectorAll('nav button')[0].style.display = 'none';
+    vnosBtn.classList.add('nav-hidden');
     if (document.getElementById('page-vnos').classList.contains('active')) {
       showPage('tretiranja');
     }
@@ -861,7 +864,6 @@ function applyLockState() {
     const editBtns = document.querySelector('#page-skropiva .card');
     if (editBtns) editBtns.querySelectorAll('.dodaj-zalogo-btn,.btn-danger,.btn-primary,.btn-gold')
       .forEach(b=>b.classList.add('locked-overlay'));
-    // lock skropiva inputs
     document.querySelectorAll('#skropiva-list input:not([readonly]),.skropivo-row select')
       .forEach(el=>el.classList.add('locked-overlay'));
   }
