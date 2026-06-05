@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vinograd – Evidenca škropljenja</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --soil:#2C1A0E; --vine:#1C4A1F; --leaf:#2D6A31;
+    --gold:#C9963B; --cream:#F5EFE0; --parchment:#EDE3CC; --mist:#D4E8D0;
+    --warn:#E07B39; --danger:#C0392B; --ok:#27AE60;
+    --border:rgba(44,26,14,0.15); --shadow:0 4px 24px rgba(44,26,14,0.12);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--soil);min-height:100vh;
+    background-image:radial-gradient(ellipse at 10% 20%,rgba(45,106,49,0.08) 0%,transparent 50%),
+    radial-gradient(ellipse at 90% 80%,rgba(107,45,94,0.06) 0%,transparent 50%)}
+
+  #sync-bar{background:var(--soil);color:var(--cream);font-size:0.75rem;text-align:center;
+    padding:4px 1rem;display:flex;align-items:center;justify-content:center;gap:8px}
+  #sync-dot{width:8px;height:8px;border-radius:50%;background:#aaa;display:inline-block;flex-shrink:0}
+  #sync-dot.ok{background:var(--ok);box-shadow:0 0 6px var(--ok)}
+  #sync-dot.syncing{background:var(--gold);animation:pulse 0.8s infinite}
+  #sync-dot.error{background:var(--danger)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+
+  header{background:var(--vine);padding:0 2rem;display:flex;align-items:center;
+    justify-content:space-between;height:60px;box-shadow:0 2px 16px rgba(0,0,0,0.25);
+    position:sticky;top:0;z-index:100}
+  .logo{display:flex;align-items:center;gap:10px;font-family:'Playfair Display',serif;
+    font-size:1.25rem;color:var(--cream)}
+  .logo span{font-size:1.4rem}
+  .header-meta{font-size:0.76rem;color:rgba(245,239,224,0.55)}
+
+  nav{background:var(--soil);display:flex;padding:0 2rem}
+  nav button{background:none;border:none;color:rgba(245,239,224,0.5);font-family:'DM Sans',sans-serif;
+    font-size:0.82rem;font-weight:500;padding:0.65rem 1.3rem;cursor:pointer;letter-spacing:0.04em;
+    border-bottom:3px solid transparent;transition:all 0.2s;text-transform:uppercase}
+  nav button:hover{color:var(--cream)}
+  nav button.active{color:var(--gold);border-bottom-color:var(--gold)}
+  nav button.nav-hidden{display:none !important;}
+
+  main{max-width:1100px;margin:0 auto;padding:1.8rem 1.5rem 4rem}
+  .page{display:none}
+  .page.active{display:block;animation:fadeIn 0.3s ease}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  .card{background:white;border-radius:12px;border:1px solid var(--border);
+    box-shadow:var(--shadow);padding:1.6rem;margin-bottom:1.4rem}
+  .card-title{font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--vine);
+    margin-bottom:1.1rem;display:flex;align-items:center;gap:8px}
+  .card-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+  .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0.9rem}
+  .form-group{display:flex;flex-direction:column;gap:4px}
+  .form-group label{font-size:0.72rem;font-weight:600;text-transform:uppercase;
+    letter-spacing:0.06em;color:rgba(44,26,14,0.5)}
+  .form-group input,.form-group select,.form-group textarea{border:1.5px solid var(--border);
+    border-radius:8px;padding:0.55rem 0.8rem;font-family:'DM Sans',sans-serif;font-size:0.9rem;
+    color:var(--soil);background:var(--cream);transition:border-color 0.2s,box-shadow 0.2s;outline:none}
+  .form-group input:focus,.form-group select:focus,.form-group textarea:focus{
+    border-color:var(--leaf);box-shadow:0 0 0 3px rgba(45,106,49,0.12);background:white}
+  .form-group textarea{resize:vertical;min-height:65px}
+  .mesanica-row{display:grid;grid-template-columns:1fr 120px 80px 32px;gap:0.5rem;align-items:center}
+  .mesanica-row select,.mesanica-row input{border:1.5px solid var(--border);border-radius:7px;
+    padding:0.45rem 0.6rem;font-family:'DM Sans',sans-serif;font-size:0.88rem;
+    color:var(--soil);background:var(--cream);outline:none}
+  .mesanica-row select:focus,.mesanica-row input:focus{border-color:var(--leaf)}
+  .enota-pill{background:var(--mist);color:var(--vine);border-radius:6px;
+    padding:0.45rem 0.5rem;font-size:0.85rem;font-weight:700;text-align:center;border:1.5px solid transparent}
+  .mesanica-row .remove-btn{background:none;border:none;cursor:pointer;font-size:1rem;
+    color:rgba(44,26,14,0.3);transition:color 0.15s;line-height:1}
+  .mesanica-row .remove-btn:hover{color:var(--danger)}
+
+  .btn{border:none;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;
+    font-weight:600;font-size:0.88rem;padding:0.65rem 1.5rem;transition:all 0.18s}
+  .btn-primary{background:var(--vine);color:white}
+  .btn-primary:hover{background:var(--leaf);transform:translateY(-1px);box-shadow:0 4px 12px rgba(28,74,31,0.3)}
+  .btn-danger{background:#fdecea;color:var(--danger);border:1px solid #f5c6c4}
+  .btn-danger:hover{background:var(--danger);color:white}
+  .btn-sm{padding:0.3rem 0.75rem;font-size:0.78rem}
+  .btn-gold{background:var(--gold);color:white}
+  .btn-gold:hover{background:#b8842e}
+  .btn-outline{background:none;border:1.5px solid var(--border);color:var(--soil)}
+  .btn-outline:hover{border-color:var(--leaf);color:var(--leaf)}
+
+  .log-list{display:flex;flex-direction:column;gap:0.6rem}
+  .tretiranje-card{background:var(--cream);border:1px solid var(--border);border-radius:10px;
+    padding:0.9rem 1.1rem;display:grid;grid-template-columns:95px 1fr 1fr 1fr auto;
+    gap:0.9rem;align-items:center;transition:box-shadow 0.2s}
+  .tretiranje-card:hover{box-shadow:0 2px 12px rgba(44,26,14,0.1)}
+  .tret-date{font-weight:600;font-size:0.85rem;color:var(--vine)}
+  .tret-date small{display:block;font-weight:400;color:rgba(44,26,14,0.45);font-size:0.73rem}
+  .tret-product{font-weight:500;font-size:0.9rem}
+  .tret-product small{display:block;color:rgba(44,26,14,0.5);font-size:0.75rem}
+  .tret-amounts{font-size:0.83rem}
+  .tret-amounts span{display:block;color:rgba(44,26,14,0.6)}
+  .tret-note{font-size:0.78rem;color:rgba(44,26,14,0.55);font-style:italic}
+
+  .empty-state{text-align:center;padding:3rem 1rem;color:rgba(44,26,14,0.4)}
+  .empty-state .big{font-size:3rem;margin-bottom:0.5rem}
+  .empty-state p{font-size:0.88rem}
+
+  .zaloga-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:0.9rem}
+  .zaloga-section-label{grid-column:1/-1;font-size:0.68rem;font-weight:700;text-transform:uppercase;
+    letter-spacing:0.08em;color:rgba(44,26,14,0.4);margin-top:0.3rem}
+  .zaloga-item{background:white;border:1px solid var(--border);border-radius:10px;
+    padding:1rem 1.1rem;position:relative;overflow:hidden}
+  .zaloga-item::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;
+    background:var(--ok);border-radius:10px 0 0 10px}
+  .zaloga-item.warn::before{background:var(--warn)}
+  .zaloga-item.danger::before{background:var(--danger)}
+  .zaloga-item.empty::before{background:#ccc}
+  .zaloga-name{font-weight:600;font-size:0.88rem;margin-bottom:5px}
+  .zaloga-bar-wrap{background:var(--parchment);border-radius:4px;height:5px;margin:7px 0;overflow:hidden}
+  .zaloga-bar{height:100%;border-radius:4px;background:var(--ok);transition:width 0.5s ease}
+  .zaloga-item.warn .zaloga-bar{background:var(--warn)}
+  .zaloga-item.danger .zaloga-bar{background:var(--danger)}
+  .zaloga-nums{display:flex;justify-content:space-between;font-size:0.76rem;color:rgba(44,26,14,0.55)}
+  .zaloga-nums strong{color:var(--soil);font-size:0.95rem}
+  .warn-label{font-size:0.7rem;margin-top:4px}
+  .btn-green{background:#d4edda;color:#155724;border:1px solid #c3e6cb}
+  .btn-green:hover{background:var(--ok);color:white}
+  .dodaj-zalogo-btn{font-size:0.75rem;padding:0.25rem 0.6rem;border-radius:6px;
+    background:var(--mist);color:var(--vine);border:1px solid rgba(44,26,14,0.2);
+    cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;white-space:nowrap}
+  .dodaj-zalogo-btn:hover{background:var(--ok);color:white}
+  .warn-label.red{color:var(--danger)}
+  .warn-label.orange{color:var(--warn)}
+
+  .skropivo-row{display:grid;grid-template-columns:1fr 72px 95px 95px 95px 80px auto;
+    gap:0.5rem;align-items:center;padding:0.5rem 0;border-bottom:1px solid var(--border)}
+  .skropivo-row:last-child{border-bottom:none}
+  .skropivo-row input,.skropivo-row select{border:1.5px solid var(--border);border-radius:6px;
+    padding:0.38rem 0.55rem;font-family:'DM Sans',sans-serif;font-size:0.82rem;
+    background:var(--cream);color:var(--soil);outline:none}
+  .skropivo-row input:focus,.skropivo-row select:focus{border-color:var(--leaf)}
+  .col-labels{display:grid;grid-template-columns:1fr 72px 95px 95px 95px 80px 38px;
+    gap:0.5rem;padding-bottom:0.4rem;border-bottom:2px solid var(--border);margin-bottom:0.2rem}
+  .col-labels span{font-size:0.67rem;font-weight:700;text-transform:uppercase;
+    letter-spacing:0.05em;color:rgba(44,26,14,0.4)}
+
+  .stats-bar{display:flex;gap:0.9rem;margin-bottom:1.4rem;flex-wrap:wrap}
+  .stat-chip{background:white;border:1px solid var(--border);border-radius:10px;
+    padding:0.65rem 1.1rem;display:flex;align-items:center;gap:8px;
+    box-shadow:0 2px 8px rgba(44,26,14,0.07)}
+  .stat-icon{font-size:1.2rem}
+  .stat-val{font-weight:700;font-size:1.05rem;color:var(--vine)}
+  .stat-lbl{font-size:0.7rem;color:rgba(44,26,14,0.5)}
+
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(44,26,14,0.45);
+    z-index:1000;align-items:center;justify-content:center;padding:1rem}
+  .modal-overlay.open{display:flex}
+  .modal{background:white;border-radius:16px;padding:1.8rem;max-width:500px;width:100%;
+    box-shadow:0 20px 60px rgba(44,26,14,0.3);animation:slideUp 0.25s ease}
+  @keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:none;opacity:1}}
+  .modal h2{font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--vine);
+    margin-bottom:1.2rem;display:flex;justify-content:space-between;align-items:center}
+  .modal-close{background:none;border:none;cursor:pointer;font-size:1.2rem;
+    color:rgba(44,26,14,0.4);transition:color 0.15s}
+  .modal-close:hover{color:var(--danger)}
+  .modal-actions{display:flex;gap:0.8rem;justify-content:flex-end;margin-top:1.2rem}
+
+  .toast{position:fixed;bottom:1.5rem;right:1.5rem;background:var(--vine);color:white;
+    padding:0.75rem 1.3rem;border-radius:10px;font-size:0.85rem;font-weight:500;
+    box-shadow:0 8px 24px rgba(0,0,0,0.2);transform:translateY(80px);opacity:0;
+    transition:all 0.3s ease;z-index:2000}
+  .toast.show{transform:none;opacity:1}
+  .toast.success{background:var(--ok)}
+  .toast.error{background:var(--danger)}
+  .toast.warn{background:var(--warn)}
+
+  .log-scroll{max-height:480px;overflow-y:auto;padding-right:4px}
+  .log-scroll::-webkit-scrollbar{width:5px}
+  .log-scroll::-webkit-scrollbar-track{background:var(--parchment);border-radius:4px}
+  .log-scroll::-webkit-scrollbar-thumb{background:var(--leaf);border-radius:4px}
+
+  #loading{position:fixed;inset:0;background:var(--cream);z-index:9999;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem}
+  #loading .spin{font-size:3rem;animation:spin 1.2s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #loading p{font-family:'Playfair Display',serif;color:var(--vine);font-size:1.1rem}
+
+  /* ── LOCK ── */
+  #lock-bar{display:flex;align-items:center;justify-content:flex-end;gap:0.7rem;
+    padding:0.5rem 1.5rem;background:var(--parchment);border-bottom:1px solid var(--border);}
+  #lock-btn{background:none;border:1.5px solid var(--border);border-radius:7px;
+    padding:0.3rem 0.9rem;font-family:'DM Sans',sans-serif;font-size:0.8rem;font-weight:600;
+    cursor:pointer;color:var(--soil);display:flex;align-items:center;gap:5px;transition:all 0.2s;}
+  #lock-btn:hover{border-color:var(--leaf);color:var(--leaf);}
+  #lock-btn.unlocked{background:var(--mist);border-color:var(--leaf);color:var(--vine);}
+  #lock-status{font-size:0.75rem;color:rgba(44,26,14,0.5);}
+  .locked-overlay{pointer-events:none;opacity:0.38;user-select:none;}
+  .read-only-badge{display:inline-block;background:#fff3cd;color:#856404;border:1px solid #ffc107;
+    border-radius:6px;font-size:0.72rem;font-weight:700;padding:2px 8px;margin-left:8px;vertical-align:middle;}
+
+  @media(max-width:700px){
+    .tretiranje-card{grid-template-columns:1fr 1fr}
+    .tret-note,.tretiranje-card>button{grid-column:1/-1}
+    .zaloga-grid{grid-template-columns:1fr 1fr}
+    .skropivo-row{grid-template-columns:1fr 60px 75px 75px 75px 70px auto}
+    header{padding:0 1rem}
+    main{padding:1rem}
+  }
+</style>
+</head>
+<body>
+
+<div id="loading"><div class="spin">🍇</div><p>Nalagam podatke...</p></div>
+
+<div id="lock-bar">
+  <span id="lock-status">👁 Način ogleda</span>
+  <button id="lock-btn" onclick="toggleLock()">🔒 Uredi</button>
+</div>
+
+<div id="sync-bar">
+  <span id="sync-dot"></span>
+  <span id="sync-text">Povezujem s Firebase...</span>
+</div>
+
+<header>
+  <div class="logo"><span>🍇</span> Vinograd Dobrovnik</div>
+  <div class="header-meta">695/3 · 0.652 ha · Vinska trta</div>
+</header>
+
+<nav>
+  <button id="nav-vnos" style="display:none" onclick="showPage('vnos')">+ Vnos</button>
+  <button id="nav-tretiranja" class="active" onclick="showPage('tretiranja')">📋 Tretiranja</button>
+  <button onclick="showPage('zaloga')">📦 Zaloga</button>
+  <button onclick="showPage('skropiva')">⚙ Škropiva</button>
+</nav>
+
+<main>
+  <!-- VNOS -->
+  <div id="page-vnos" class="page">
+    <div class="card">
+      <div class="card-title">🌿 Novo tretiranje</div>
+      <div class="form-grid" style="margin-bottom:1.1rem;">
+        <div class="form-group">
+          <label>Datum</label>
+          <input type="date" id="vnos-datum">
+        </div>
+        <div class="form-group">
+          <label>Ura</label>
+          <input type="time" id="vnos-ura">
+        </div>
+        <div class="form-group">
+          <label>Količina vode (L)</label>
+          <input type="number" id="vnos-voda" placeholder="0" min="0" step="any">
+        </div>
+        <div class="form-group" style="grid-column:1/-1">
+          <label>Namen / opomba</label>
+          <textarea id="vnos-namen" placeholder="npr. preventiva plesni, 1. tretiranje..."></textarea>
+        </div>
+      </div>
+
+      <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:rgba(44,26,14,0.5);margin-bottom:0.6rem;">
+        🧪 Mešanica škropiv
+      </div>
+      <!-- vrstice mešanice -->
+      <div id="mesanica-header" style="display:grid;grid-template-columns:1fr 120px 80px 32px;gap:0.5rem;margin-bottom:0.3rem;padding:0 0.2rem;">
+        <span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:rgba(44,26,14,0.4);">Škropivo</span>
+        <span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:rgba(44,26,14,0.4);">Odmerek</span>
+        <span style="font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:rgba(44,26,14,0.4);">Enota</span>
+        <span></span>
+      </div>
+      <div id="mesanica-rows" style="display:flex;flex-direction:column;gap:0.4rem;margin-bottom:0.7rem;"></div>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+        <button class="btn btn-outline" style="font-size:0.82rem;padding:0.4rem 1rem;" onclick="dodajVrstico('ffs')">🌿 + Dodaj škropivo</button>
+        <button class="btn btn-outline" style="font-size:0.82rem;padding:0.4rem 1rem;border-color:var(--leaf);color:var(--leaf);" onclick="dodajVrstico('gnojilo')">🌱 + Dodaj gnojilo</button>
+      </div>
+
+      <div style="margin-top:1.2rem;display:flex;gap:0.8rem;align-items:center;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="shrani()">✓ Shrani tretiranje</button>
+        <button class="btn btn-outline" onclick="resetForm()">Počisti</button>
+      </div>
+    </div>
+    <div class="stats-bar" id="quick-stats"></div>
+  </div>
+
+  <!-- TRETIRANJA -->
+  <div id="page-tretiranja" class="page active">
+    <div class="card">
+      <div class="card-title">📋 Evidenca tretiranj</div>
+      <div class="log-scroll"><div class="log-list" id="log-list"></div></div>
+    </div>
+  </div>
+
+  <!-- ZALOGA -->
+  <div id="page-zaloga" class="page">
+    <div class="card">
+      <div class="card-title">📦 Stanje zaloge</div>
+      <div class="zaloga-grid" id="zaloga-grid"></div>
+    </div>
+  </div>
+
+  <!-- ŠKROPIVA -->
+  <div id="page-skropiva" class="page">
+    <!-- FFS -->
+    <div class="card">
+      <div class="card-title">🌿 Škropiva FFS</div>
+      <div class="col-labels">
+        <span>Ime škropiva</span><span>Enota</span><span>Zač. zaloga</span>
+        <span>Skupna poraba</span><span>Trenutna zaloga</span><span>+ Zaloga</span><span></span>
+      </div>
+      <div id="skropiva-ffs-list"></div>
+      <div id="skropiva-ffs-btns" style="margin-top:1rem;display:flex;gap:0.8rem;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="dodajSkropivo(false)">+ Dodaj škropivo FFS</button>
+        <button class="btn btn-gold" onclick="shraniSkropiva()">☁ Shrani v oblak</button>
+      </div>
+    </div>
+    <!-- Gnojila -->
+    <div class="card">
+      <div class="card-title">🌱 Gnojila</div>
+      <div class="col-labels">
+        <span>Ime gnojila</span><span>Enota</span><span>Zač. zaloga</span>
+        <span>Skupna poraba</span><span>Trenutna zaloga</span><span>+ Zaloga</span><span></span>
+      </div>
+      <div id="skropiva-gnojila-list"></div>
+      <div id="skropiva-gnojila-btns" style="margin-top:1rem;display:flex;gap:0.8rem;flex-wrap:wrap;">
+        <button class="btn btn-primary" onclick="dodajSkropivo(true)">+ Dodaj gnojilo</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- NOVO ŠKROPIVO MODAL -->
+<div class="modal-overlay" id="novo-skropivo-modal">
+  <div class="modal" style="max-width:420px;">
+    <h2 id="novo-skropivo-title">🌿 Novo škropivo FFS <button class="modal-close" onclick="closeNovoSkropivoModal()">✕</button></h2>
+    <input type="hidden" id="novo-skropivo-gnojilo" value="0">
+    <div style="display:flex;flex-direction:column;gap:0.9rem;">
+      <div class="form-group">
+        <label>Ime</label>
+        <input type="text" id="novo-skropivo-naziv" placeholder="npr. Folpan 80 WDG">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.9rem;">
+        <div class="form-group">
+          <label>Enota</label>
+          <select id="novo-skropivo-enota">
+            <option>ml</option><option>g</option><option>L</option><option>kg</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Začetna zaloga</label>
+          <input type="number" id="novo-skropivo-zacetna" placeholder="0" min="0" step="any">
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeNovoSkropivoModal()">Prekliči</button>
+      <button class="btn btn-primary" onclick="confirmNovoSkropivo()">✓ Dodaj</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOCK MODAL -->
+<div class="modal-overlay" id="lock-modal">
+  <div class="modal" style="max-width:380px;">
+    <h2>🔐 Vpis gesla <button class="modal-close" onclick="closeLockModal()">✕</button></h2>
+    <p style="font-size:0.88rem;color:rgba(44,26,14,0.6);margin-bottom:1.2rem;">Vnesite geslo za urejanje aplikacije.</p>
+    <div class="form-group">
+      <label>Geslo</label>
+      <input type="password" id="lock-password-input" placeholder="••••••••"
+        style="font-size:1rem;letter-spacing:0.1em;">
+    </div>
+    <div id="lock-error" style="color:var(--danger);font-size:0.82rem;margin-top:0.5rem;display:none;">
+      ❌ Napačno geslo!
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeLockModal()">Prekliči</button>
+      <button class="btn btn-primary" onclick="confirmLock()">✓ Prijava</button>
+    </div>
+  </div>
+</div>
+
+<!-- DODAJ ZALOGO MODAL -->
+<div class="modal-overlay" id="zaloga-modal">
+  <div class="modal">
+    <h2>📦 Dodaj zalogo <button class="modal-close" onclick="closeZalogaModal()">✕</button></h2>
+    <p style="font-size:0.88rem;color:rgba(44,26,14,0.6);margin-bottom:1.2rem;">
+      Vpišite količino ki ste jo kupili — prištela se bo k obstoječi zalogi.
+    </p>
+    <div id="zaloga-modal-info" style="background:var(--cream);border-radius:8px;padding:0.8rem 1rem;margin-bottom:1rem;font-size:0.88rem;"></div>
+    <div class="form-group">
+      <label>Količina za dodati</label>
+      <input type="number" id="zaloga-modal-kolicina" placeholder="0" min="0" step="any"
+        style="font-size:1.1rem;font-weight:600;text-align:center;">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeZalogaModal()">Prekliči</button>
+      <button class="btn btn-primary" onclick="confirmDodajZalogo()">✓ Dodaj zalogo</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE MODAL -->
+<div class="modal-overlay" id="delete-modal">
+  <div class="modal">
+    <h2>Izbriši tretiranje <button class="modal-close" onclick="closeModal()">✕</button></h2>
+    <p style="color:rgba(44,26,14,0.65);font-size:0.88rem;">Ali res želiš izbrisati to tretiranje? Zaloga se bo samodejno posodobila.</p>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">Prekliči</button>
+      <button class="btn btn-danger" onclick="confirmDelete()">Izbriši</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc, collection,
+         addDoc, getDocs, deleteDoc, query, orderBy }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ── Firebase config ──────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyAMPuKSYLTB9LH0bcDv1TnQpYCtq9bhElU",
+  authDomain: "vinograd-2026.firebaseapp.com",
+  projectId: "vinograd-2026",
+  storageBucket: "vinograd-2026.firebasestorage.app",
+  messagingSenderId: "158473735520",
+  appId: "1:158473735520:web:fad10e5144e5e51fec2205"
+};
+
+const app = initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+
+// ── Firestore helpers ────────────────────────────────
+const SKROPIVA_DOC = doc(db, 'vinograd', 'skropiva');
+const TRET_COL     = collection(db, 'tretiranja');
+
+async function fbLoadSkropiva() {
+  const snap = await getDoc(SKROPIVA_DOC);
+  return snap.exists() ? snap.data().seznam : null;
+}
+async function fbSaveSkropiva(seznam) {
+  await setDoc(SKROPIVA_DOC, { seznam });
+}
+async function fbLoadTretiranja() {
+  const q    = query(TRET_COL, orderBy('datum','desc'), orderBy('ura','desc'));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ fbId: d.id, ...d.data() }));
+}
+async function fbAddTretiranje(t) {
+  const ref = await addDoc(TRET_COL, t);
+  return ref.id;
+}
+async function fbDeleteTretiranje(fbId) {
+  await deleteDoc(doc(db, 'tretiranja', fbId));
+}
+
+// ── Default škropiva ─────────────────────────────────
+const DEFAULT_SKROPIVA = [
+  {id:1,  ime:'Folpan 80 WDG',         enota:'g',  zacetna:40,  gnojilo:false},
+  {id:2,  ime:'Sulfar',                 enota:'g',  zacetna:0,   gnojilo:false},
+  {id:3,  ime:'Cuprablau',              enota:'g',  zacetna:600, gnojilo:false},
+  {id:4,  ime:'Sfinga Extra WDG',       enota:'g',  zacetna:0,   gnojilo:false},
+  {id:5,  ime:'Delan Pro',              enota:'ml', zacetna:400, gnojilo:false},
+  {id:6,  ime:'Sivanto Prime',          enota:'ml', zacetna:65,  gnojilo:false},
+  {id:7,  ime:'Pepelin',                enota:'g',  zacetna:0,   gnojilo:false},
+  {id:8,  ime:'Magma triple',           enota:'g',  zacetna:190, gnojilo:false},
+  {id:9,  ime:'Talendo',                enota:'ml', zacetna:0,   gnojilo:false},
+  {id:10, ime:'Pyrus',                  enota:'ml', zacetna:0,   gnojilo:false},
+  {id:11, ime:'Domark',                 enota:'ml', zacetna:0,   gnojilo:false},
+  {id:12, ime:'Decis',                  enota:'ml', zacetna:30,  gnojilo:false},
+  {id:13, ime:'Mikal premium F',        enota:'g',  zacetna:540, gnojilo:false},
+  {id:14, ime:'Nativo 75 WG',           enota:'g',  zacetna:0,   gnojilo:false},
+  {id:15, ime:'Luna Experience',        enota:'ml', zacetna:75,  gnojilo:false},
+  {id:16, ime:'Switch 62,5 WG',         enota:'g',  zacetna:125, gnojilo:false},
+  {id:17, ime:'Teldor SC 500',          enota:'ml', zacetna:100, gnojilo:false},
+  {id:18, ime:'Reboot',                 enota:'g',  zacetna:45,  gnojilo:false},
+  {id:19, ime:'Cosan',                  enota:'g',  zacetna:860, gnojilo:false},
+  {id:20, ime:'Spirox D',               enota:'ml', zacetna:100, gnojilo:false},
+  {id:21, ime:'Protifert LMW',          enota:'ml', zacetna:270, gnojilo:true },
+  {id:22, ime:'Listin foliar magnezij', enota:'ml', zacetna:210, gnojilo:true },
+  {id:23, ime:'Bogati bor',             enota:'ml', zacetna:40,  gnojilo:true },
+  {id:24, ime:'Tekoče železo',          enota:'ml', zacetna:60,  gnojilo:true },
+];
+
+// ── App state ────────────────────────────────────────
+let state = { skropiva: [], tretiranja: [] };
+
+function setSyncStatus(status, text) {
+  document.getElementById('sync-dot').className  = status;
+  document.getElementById('sync-text').textContent = text;
+}
+
+// ── LOAD ─────────────────────────────────────────────
+async function loadAll() {
+  setSyncStatus('syncing', 'Nalagam iz Firebase...');
+  try {
+    const [skr, tret] = await Promise.all([fbLoadSkropiva(), fbLoadTretiranja()]);
+    state.skropiva   = skr  || JSON.parse(JSON.stringify(DEFAULT_SKROPIVA));
+    state.tretiranja = tret || [];
+    setSyncStatus('ok', 'Firebase ✓ — sinhronizirano');
+  } catch(e) {
+    console.error(e);
+    setSyncStatus('error', 'Napaka: ' + e.message);
+    // fallback local
+    try {
+      const raw = localStorage.getItem('vinograd_fallback');
+      if (raw) { const d=JSON.parse(raw); state.skropiva=d.skropiva; state.tretiranja=d.tretiranja||[]; }
+      else { state.skropiva=JSON.parse(JSON.stringify(DEFAULT_SKROPIVA)); state.tretiranja=[]; }
+    } catch(_) {
+      state.skropiva=JSON.parse(JSON.stringify(DEFAULT_SKROPIVA)); state.tretiranja=[];
+    }
+  }
+}
+
+function saveLocalFallback() {
+  localStorage.setItem('vinograd_fallback', JSON.stringify(state));
+}
+
+// ── COMPUTED ─────────────────────────────────────────
+function poraba(skrId) {
+  return state.tretiranja.reduce((sum, t) => {
+    if (t.mesanica && t.mesanica.length) {
+      // new format: mesanica array
+      const m = t.mesanica.find(m=>m.skrId===skrId);
+      return sum + (m ? parseFloat(m.odmerek)||0 : 0);
+    } else {
+      // old format: single skrId
+      return sum + (t.skrId===skrId ? parseFloat(t.odmerek)||0 : 0);
+    }
+  }, 0);
+}
+function zaloga(skr)  { return skr.zacetna - poraba(skr.id); }
+function zalogaStatus(skr) {
+  const z=zaloga(skr);
+  if(z<0) return 'danger';
+  if(skr.zacetna>0 && z/skr.zacetna<0.25) return 'warn';
+  if(skr.zacetna===0 && z===0) return 'empty';
+  return 'ok';
+}
+function nextId() { return Math.max(0,...state.skropiva.map(s=>s.id))+1; }
+
+// ── NAV ──────────────────────────────────────────────
+const PAGES = ['vnos','tretiranja','zaloga','skropiva']; // nav buttons: 0=vnos,1=tret,2=zaloga,3=skropiva
+window.showPage = function(name) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  const navBtns = document.querySelectorAll('nav button');
+  // map page name to nav button index (vnos=0, tretiranja=1, zaloga=2, skropiva=3)
+  navBtns[PAGES.indexOf(name)].classList.add('active');
+  if(name==='tretiranja') renderTretiranja();
+  if(name==='zaloga')     renderZaloga();
+  if(name==='skropiva')   renderSkropiva();
+  if(name==='vnos')       renderQuickStats();
+};
+
+// ── VNOS ─────────────────────────────────────────────
+function initVnos() {
+  document.getElementById('vnos-datum').value = new Date().toISOString().split('T')[0];
+  document.getElementById('vnos-ura').value   = new Date().toTimeString().slice(0,5);
+  dodajVrstico('ffs'); // start with one empty ffs row
+  renderQuickStats();
+  // start on tretiranja page (vnos is locked by default)
+  showPage('tretiranja');
+}
+
+// ── Mešanica vrstice ─────────────────────────────────
+let mesanicaIdCounter = 0;
+
+function buildSelectHTML(selectedId, tip='vse') {
+  let html = '<option value="">— izberi —</option>';
+  const sorted = [...state.skropiva].sort((a,b)=>a.ime.localeCompare(b.ime,'sl'));
+  let items;
+  if (tip === 'ffs')     items = sorted.filter(s=>!s.gnojilo);
+  else if (tip === 'gnojilo') items = sorted.filter(s=>s.gnojilo);
+  else items = sorted;
+  items.forEach(s => { html += `<option value="${s.id}"${s.id==selectedId?' selected':''}>${s.ime}</option>`; });
+  return html;
+}
+
+window.dodajVrstico = function(tip='ffs', skrId, odmerek) {
+  const id = ++mesanicaIdCounter;
+  const div = document.createElement('div');
+  div.className = 'mesanica-row';
+  div.dataset.rid = id;
+  div.dataset.tip = tip;
+  const label = tip==='gnojilo' ? '🌱 gnojilo' : '🌿 škropivo';
+  div.innerHTML = `
+    <select onchange="onSkrChange(this,${id})">${buildSelectHTML(skrId||'', tip)}</select>
+    <input type="number" placeholder="0" min="0" step="any" class="odmerek-input" value="${odmerek||''}">
+    <div class="enota-pill" id="enota-pill-${id}">—</div>
+    <button class="remove-btn" onclick="odstraniVrstico(${id})">✕</button>
+  `;
+  document.getElementById('mesanica-rows').appendChild(div);
+  if (skrId) {
+    const skr = state.skropiva.find(s=>s.id==skrId);
+    if (skr) document.getElementById('enota-pill-'+id).textContent = skr.enota;
+  }
+};
+
+window.onSkrChange = function(sel, rid) {
+  const skr = state.skropiva.find(s=>s.id==sel.value);
+  const pill = document.getElementById('enota-pill-'+rid);
+  pill.textContent = skr ? skr.enota : '—';
+};
+
+window.odstraniVrstico = function(rid) {
+  const rows = document.querySelectorAll('#mesanica-rows .mesanica-row');
+  if (rows.length <= 1) return toast('Vsaj en vnos mora ostati!','warn');
+  document.querySelector(`#mesanica-rows .mesanica-row[data-rid="${rid}"]`).remove();
+};
+
+function getMesanica() {
+  const rows = document.querySelectorAll('#mesanica-rows .mesanica-row');
+  return Array.from(rows).map(row => {
+    const skrId  = parseInt(row.querySelector('select').value);
+    const odmerek= parseFloat(row.querySelector('.odmerek-input').value)||0;
+    return { skrId, odmerek };
+  });
+}
+
+function populateSkrSelect() {
+  document.querySelectorAll('#mesanica-rows .mesanica-row').forEach(row => {
+    const sel = row.querySelector('select');
+    const tip = row.dataset.tip || 'ffs';
+    const val = sel.value;
+    sel.innerHTML = buildSelectHTML(val, tip);
+  });
+}
+
+window.shrani = async function(){
+  const datum  = document.getElementById('vnos-datum').value;
+  const ura    = document.getElementById('vnos-ura').value;
+  const voda   = parseFloat(document.getElementById('vnos-voda').value)||0;
+  const namen  = document.getElementById('vnos-namen').value.trim();
+  const mesanica = getMesanica();
+
+  if (!datum) return toast('Vnesi datum!','error');
+  if (!mesanica.length) return toast('Dodaj vsaj eno škropivo!','error');
+
+  // validate rows
+  for (const m of mesanica) {
+    if (!m.skrId) return toast('Izberi škropivo v vsaki vrstici!','error');
+    if (!m.odmerek || m.odmerek <= 0) return toast('Vnesi odmerek za vsako škropivo!','error');
+  }
+
+  // check stock warnings
+  for (const m of mesanica) {
+    const skr = state.skropiva.find(s=>s.id===m.skrId);
+    const zPo = zaloga(skr) - m.odmerek;
+    if (zPo < 0 && !confirm(`Opozorilo: zaloga ${skr.ime} bo negativna (${zPo.toFixed(1)} ${skr.enota}). Nadaljujem?`)) return;
+  }
+
+  setSyncStatus('syncing','Shranjujem...');
+  try {
+    const tData = { datum, ura, mesanica, voda, namen, ts: Date.now() };
+    const fbId  = await fbAddTretiranje(tData);
+    state.tretiranja.unshift({ fbId, ...tData });
+    saveLocalFallback();
+    setSyncStatus('ok','Firebase ✓ — sinhronizirano');
+    toast('Tretiranje shranjeno! ✓','success');
+    resetForm();
+    renderQuickStats();
+  } catch(e){
+    setSyncStatus('error','Napaka shranjevanja');
+    toast('Napaka: '+e.message,'error');
+  }
+};
+
+window.resetForm = function(){
+  ['vnos-voda','vnos-namen'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('mesanica-rows').innerHTML='';
+  mesanicaIdCounter = 0;
+  dodajVrstico('ffs'); // start with one empty ffs row
+};
+
+function renderQuickStats(){
+  const total=state.tretiranja.length;
+  const mesec=new Date().toISOString().slice(0,7);
+  const mesecN=state.tretiranja.filter(t=>t.datum&&t.datum.startsWith(mesec)).length;
+  const nizka=state.skropiva.filter(s=>['warn','danger'].includes(zalogaStatus(s))).length;
+  document.getElementById('quick-stats').innerHTML=`
+    <div class="stat-chip"><span class="stat-icon">📋</span><div><div class="stat-val">${total}</div><div class="stat-lbl">Skupaj tretiranj</div></div></div>
+    <div class="stat-chip"><span class="stat-icon">📅</span><div><div class="stat-val">${mesecN}</div><div class="stat-lbl">Ta mesec</div></div></div>
+    <div class="stat-chip"><span class="stat-icon">${nizka>0?'⚠':'✅'}</span><div><div class="stat-val" style="color:${nizka>0?'var(--warn)':'var(--ok)'}">${nizka}</div><div class="stat-lbl">Nizka zaloga</div></div></div>
+  `;
+}
+
+// ── TRETIRANJA ───────────────────────────────────────
+function renderTretiranja(){
+  const list=document.getElementById('log-list');
+  const sorted=[...state.tretiranja].sort((a,b)=>b.datum.localeCompare(a.datum)||b.ts-a.ts);
+  if(!sorted.length){
+    list.innerHTML='<div class="empty-state"><div class="big">🌱</div><p>Še ni vnesenih tretiranj.<br>Začni z zavihkom <strong>+ Vnos</strong>.</p></div>';
+    return;
+  }
+  list.innerHTML=sorted.map(t=>{
+    const dStr=new Date(t.datum).toLocaleDateString('sl-SI',{day:'2-digit',month:'2-digit',year:'numeric'});
+    // support both old (skrId) and new (mesanica) format
+    let productHTML='';
+    if(t.mesanica && t.mesanica.length){
+      const items=t.mesanica.map(m=>{
+        const skr=state.skropiva.find(s=>s.id===m.skrId);
+        return skr?`${skr.ime} <strong>${m.odmerek} ${skr.enota}</strong>`:'?';
+      });
+      productHTML=`<div class="tret-product" style="font-size:0.82rem;line-height:1.6">${items.join('<br>')}</div>`;
+    } else {
+      const skr=state.skropiva.find(s=>s.id===t.skrId);
+      const ime=skr?skr.ime:'?'; const enota=skr?skr.enota:'';
+      productHTML=`<div class="tret-product">${ime}<small>${skr&&skr.gnojilo?'gnojilo':'FFS'}</small></div>
+      <div class="tret-amounts"><span>Odmerek: <strong>${t.odmerek} ${enota}</strong></span></div>`;
+    }
+    return `<div class="tretiranje-card">
+      <div class="tret-date">${dStr}<small>${t.ura||''}</small></div>
+      ${productHTML}
+      <div class="tret-amounts">${t.voda?`<span>Voda: ${t.voda} L</span>`:''}</div>
+      <div class="tret-note">${t.namen||'—'}</div>
+      ${isUnlocked ? `<button class="btn btn-danger btn-sm" onclick="openDelete('${t.fbId}')">✕</button>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// ── ZALOGA ───────────────────────────────────────────
+function renderZaloga(){
+  const grid=document.getElementById('zaloga-grid');
+  const sorted=[...state.skropiva].sort((a,b)=>a.ime.localeCompare(b.ime,'sl'));
+  const ffs=sorted.filter(s=>!s.gnojilo);
+  const gnojila=sorted.filter(s=>s.gnojilo);
+  function renderItems(items){
+    return items.map(skr=>{
+      const z=zaloga(skr); const p=poraba(skr.id);
+      const pct=skr.zacetna>0?Math.max(0,Math.min(100,z/skr.zacetna*100)):(z>0?100:0);
+      const st=zalogaStatus(skr);
+      return `<div class="zaloga-item ${st}">
+        <div class="zaloga-name">${skr.ime}</div>
+        <div class="zaloga-bar-wrap"><div class="zaloga-bar" style="width:${pct}%"></div></div>
+        <div class="zaloga-nums"><span>Poraba: ${p.toFixed(1)} ${skr.enota}</span><strong>${z.toFixed(1)} ${skr.enota}</strong></div>
+        ${st==='danger'?'<div class="warn-label red">⚠ Zaloga izčrpana!</div>':''}
+        ${st==='warn'  ?'<div class="warn-label orange">⚠ Nizka zaloga</div>':''}
+      </div>`;
+    }).join('');
+  }
+  grid.innerHTML=
+    `<div class="zaloga-section-label">🌿 Škropiva FFS</div>${renderItems(ffs)}`+
+    (gnojila.length?`<div class="zaloga-section-label">🌱 Gnojila</div>${renderItems(gnojila)}`:'');
+}
+
+// ── ŠKROPIVA ─────────────────────────────────────────
+function renderSkrRow(skr, locked) {
+  const p = poraba(skr.id).toFixed(1);
+  const z = zaloga(skr).toFixed(1);
+  const zColor = parseFloat(z)<0?'#fdecea':parseFloat(z)<50?'#fff8e1':'#f0faf0';
+  const cell = 'display:flex;align-items:center;font-size:0.88rem;';
+  const imeEl   = locked
+    ? `<div style="${cell}font-weight:500;">${skr.ime}</div>`
+    : `<input type="text" value="${skr.ime}" data-field="ime" placeholder="Ime">`;
+  const enotaEl = locked
+    ? `<div style="${cell}justify-content:center;">${skr.enota}</div>`
+    : `<select data-field="enota">${['g','ml','L','kg'].map(e=>`<option${skr.enota===e?' selected':''}>${e}</option>`).join('')}</select>`;
+  const zacEl   = locked
+    ? `<div style="${cell}justify-content:center;">${skr.zacetna}</div>`
+    : `<input type="number" value="${skr.zacetna}" data-field="zacetna" min="0" step="any">`;
+  const editBtns = locked ? `` : `
+    <button class="dodaj-zalogo-btn" onclick="openDodajZalogo(${skr.id})">+ Dodaj</button>
+    <button class="btn btn-danger btn-sm" onclick="odstraniSkropivo(${skr.id})">✕</button>`;
+  return `<div class="skropivo-row" data-id="${skr.id}">
+    ${imeEl}${enotaEl}${zacEl}
+    <input type="number" value="${p}" readonly style="background:#f0f0f0;color:#888;">
+    <input type="number" value="${z}" readonly style="background:${zColor};">
+    ${editBtns}
+  </div>`;
+}
+
+function renderSkropiva(){
+  const locked = !isUnlocked;
+  const sorted = [...state.skropiva].sort((a,b)=>a.ime.localeCompare(b.ime,'sl'));
+  const ffs     = sorted.filter(s=>!s.gnojilo);
+  const gnojila = sorted.filter(s=>s.gnojilo);
+
+  document.getElementById('skropiva-ffs-list').innerHTML     = ffs.map(s=>renderSkrRow(s,locked)).join('');
+  document.getElementById('skropiva-gnojila-list').innerHTML = gnojila.map(s=>renderSkrRow(s,locked)).join('');
+
+  // adjust grid columns and col-labels based on lock state
+  const lockedGrid  = '1fr 72px 95px 95px 95px';
+  const unlockedGrid= '1fr 72px 95px 95px 95px 80px auto';
+  const lockedLbl   = '1fr 72px 95px 95px 95px';
+  const unlockedLbl = '1fr 72px 95px 95px 95px 80px 38px';
+
+  document.querySelectorAll('.skropivo-row').forEach(r=>{
+    r.style.gridTemplateColumns = locked ? lockedGrid : unlockedGrid;
+  });
+  document.querySelectorAll('.col-labels').forEach(r=>{
+    r.style.gridTemplateColumns = locked ? lockedLbl : unlockedLbl;
+  });
+
+  // show/hide edit buttons
+  ['skropiva-ffs-btns','skropiva-gnojila-btns'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.style.display = locked ? 'none' : 'flex';
+  });
+}
+
+window.shraniSkropiva = async function(){
+  document.querySelectorAll('#skropiva-list .skropivo-row').forEach(row=>{
+    const id=parseInt(row.dataset.id);
+    const skr=state.skropiva.find(s=>s.id===id);
+    if(!skr) return;
+    skr.ime    =row.querySelector('[data-field="ime"]').value.trim()||skr.ime;
+    skr.enota  =row.querySelector('[data-field="enota"]').value;
+    skr.zacetna=parseFloat(row.querySelector('[data-field="zacetna"]').value)||0;
+  });
+  setSyncStatus('syncing','Shranjujem škropiva...');
+  try {
+    await fbSaveSkropiva(state.skropiva);
+    saveLocalFallback();
+    setSyncStatus('ok','Firebase ✓ — sinhronizirano');
+    populateSkrSelect(); renderSkropiva();
+    toast('Škropiva shranjena v Firebase! ✓','success');
+  } catch(e){
+    setSyncStatus('error','Napaka'); toast('Napaka: '+e.message,'error');
+  }
+};
+
+window.dodajSkropivo = function(gnojilo=false){
+  document.getElementById('novo-skropivo-naziv').value = '';
+  document.getElementById('novo-skropivo-enota').value = 'ml';
+  document.getElementById('novo-skropivo-zacetna').value = '';
+  document.getElementById('novo-skropivo-gnojilo').value = gnojilo ? '1' : '0';
+  document.getElementById('novo-skropivo-title').textContent = gnojilo ? '🌱 Novo gnojilo' : '🌿 Novo škropivo FFS';
+  document.getElementById('novo-skropivo-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('novo-skropivo-naziv').focus(), 100);
+};
+
+window.confirmNovoSkropivo = function(){
+  const ime     = document.getElementById('novo-skropivo-naziv').value.trim();
+  const enota   = document.getElementById('novo-skropivo-enota').value;
+  const zacetna = parseFloat(document.getElementById('novo-skropivo-zacetna').value)||0;
+  const gnojilo = document.getElementById('novo-skropivo-gnojilo').value === '1';
+  if (!ime) return toast('Vnesi ime!','error');
+  state.skropiva.push({id:nextId(), ime, enota, zacetna, gnojilo});
+  document.getElementById('novo-skropivo-modal').classList.remove('open');
+  renderSkropiva(); populateSkrSelect();
+  toast(`${ime} dodano! ✓`,'success');
+};
+
+window.closeNovoSkropivoModal = function(){
+  document.getElementById('novo-skropivo-modal').classList.remove('open');
+};
+
+window.odstraniSkropivo = async function(id){
+  const used=state.tretiranja.some(t=>t.skrId===id);
+  if(used&&!confirm('To škropivo je že bilo uporabljeno. Res izbrisati?')) return;
+  state.skropiva=state.skropiva.filter(s=>s.id!==id);
+  try { await fbSaveSkropiva(state.skropiva); saveLocalFallback(); } catch(e){}
+  renderSkropiva(); populateSkrSelect();
+  toast('Škropivo odstranjeno','success');
+};
+
+// ── DODAJ ZALOGO MODAL ───────────────────────────────
+let pendingZalogaId = null;
+
+window.openDodajZalogo = function(id) {
+  pendingZalogaId = id;
+  const skr = state.skropiva.find(s=>s.id===id);
+  const z = zaloga(skr);
+  const p = poraba(skr.id);
+  document.getElementById('zaloga-modal-info').innerHTML = `
+    <strong>${skr.ime}</strong><br>
+    <span style="color:rgba(44,26,14,0.55);">Trenutna zaloga: </span>
+    <strong style="color:${z<0?'var(--danger)':z<skr.zacetna*0.25?'var(--warn)':'var(--ok)'}">${z.toFixed(1)} ${skr.enota}</strong>
+    &nbsp;·&nbsp;
+    <span style="color:rgba(44,26,14,0.55);">Poraba do sedaj: ${p.toFixed(1)} ${skr.enota}</span>
+  `;
+  document.getElementById('zaloga-modal-kolicina').value = '';
+  document.getElementById('zaloga-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('zaloga-modal-kolicina').focus(), 100);
+};
+
+window.closeZalogaModal = function() {
+  pendingZalogaId = null;
+  document.getElementById('zaloga-modal').classList.remove('open');
+};
+
+window.confirmDodajZalogo = async function() {
+  const kolicina = parseFloat(document.getElementById('zaloga-modal-kolicina').value);
+  if (!kolicina || kolicina <= 0) return toast('Vnesi količino!','error');
+  const skr = state.skropiva.find(s=>s.id===pendingZalogaId);
+  skr.zacetna += kolicina;
+  setSyncStatus('syncing','Shranjujem...');
+  try {
+    await fbSaveSkropiva(state.skropiva);
+    saveLocalFallback();
+    setSyncStatus('ok','Firebase ✓ — sinhronizirano');
+    closeZalogaModal();
+    renderSkropiva();
+    renderQuickStats();
+    toast(`+${kolicina} ${skr.enota} dodano k ${skr.ime} ✓`,'success');
+  } catch(e) {
+    setSyncStatus('error','Napaka'); toast('Napaka: '+e.message,'error');
+  }
+};
+
+document.getElementById('zaloga-modal').addEventListener('click',function(e){if(e.target===this)closeZalogaModal();});
+// Enter key in amount field
+document.getElementById('zaloga-modal-kolicina').addEventListener('keydown',function(e){
+  if(e.key==='Enter') confirmDodajZalogo();
+});
+
+// ── DELETE ───────────────────────────────────────────
+let pendingDeleteId=null;
+window.openDelete=function(fbId){pendingDeleteId=fbId;document.getElementById('delete-modal').classList.add('open');};
+window.closeModal=function(){pendingDeleteId=null;document.getElementById('delete-modal').classList.remove('open');};
+window.confirmDelete=async function(){
+  setSyncStatus('syncing','Brišem...');
+  try{
+    await fbDeleteTretiranje(pendingDeleteId);
+    state.tretiranja=state.tretiranja.filter(t=>t.fbId!==pendingDeleteId);
+    saveLocalFallback();
+    setSyncStatus('ok','Firebase ✓ — sinhronizirano');
+    closeModal(); renderTretiranja(); renderQuickStats();
+    toast('Tretiranje izbrisano','success');
+  } catch(e){ setSyncStatus('error','Napaka'); toast('Napaka: '+e.message,'error'); }
+};
+document.getElementById('delete-modal').addEventListener('click',function(e){if(e.target===this)closeModal();});
+
+// ── TOAST ────────────────────────────────────────────
+window.toast=function(msg,type='success'){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className='toast show '+type;
+  clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),2800);
+};
+
+// ── INIT ─────────────────────────────────────────────
+// ── LOCK SYSTEM ──────────────────────────────────────
+const PWD_HASH = '5e98f456af948d42adb2e41e56bcc77c7c97d567728bae7b257dd28ee0cc0804';
+let isUnlocked = false;
+
+async function sha256(str) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+function applyLockState() {
+  const btn    = document.getElementById('lock-btn');
+  const status = document.getElementById('lock-status');
+  // sections that require unlock
+  const editSections = [
+    document.getElementById('page-vnos'),
+    document.querySelector('#page-skropiva .card div[style*="margin-top:1rem"]'),
+    document.getElementById('skropiva-list'),
+  ];
+  const vnosBtn = document.getElementById('nav-vnos');
+  if (isUnlocked) {
+    btn.textContent = '🔓 Zakleni';
+    btn.classList.add('unlocked');
+    status.textContent = '✏️ Način urejanja';
+    vnosBtn.style.display = '';
+    document.querySelectorAll('.locked-overlay').forEach(el=>el.classList.remove('locked-overlay'));
+    if (document.getElementById('page-skropiva').classList.contains('active')) renderSkropiva();
+    if (document.getElementById('page-tretiranja').classList.contains('active')) renderTretiranja();
+  } else {
+    btn.textContent = '🔒 Uredi';
+    btn.classList.remove('unlocked');
+    status.textContent = '👁 Način ogleda';
+    vnosBtn.style.display = 'none';
+    if (document.getElementById('page-vnos').classList.contains('active')) {
+      showPage('tretiranja');
+    }
+    // re-render škropiva in locked mode
+    if (document.getElementById('page-skropiva').classList.contains('active')) renderSkropiva();
+    if (document.getElementById('page-tretiranja').classList.contains('active')) renderTretiranja();
+  }
+}
+
+window.toggleLock = function() {
+  if (isUnlocked) {
+    isUnlocked = false;
+    applyLockState();
+    toast('Aplikacija zaklenjena 🔒','warn');
+  } else {
+    document.getElementById('lock-password-input').value='';
+    document.getElementById('lock-error').style.display='none';
+    document.getElementById('lock-modal').classList.add('open');
+    setTimeout(()=>document.getElementById('lock-password-input').focus(),100);
+  }
+};
+
+window.closeLockModal = function() {
+  document.getElementById('lock-modal').classList.remove('open');
+};
+
+window.confirmLock = async function() {
+  const input = document.getElementById('lock-password-input').value;
+  const hash  = await sha256(input);
+  if (hash === PWD_HASH) {
+    isUnlocked = true;
+    closeLockModal();
+    applyLockState();
+    toast('Dobrodošli! Način urejanja aktiven ✓','success');
+  } else {
+    document.getElementById('lock-error').style.display = 'block';
+    document.getElementById('lock-password-input').value='';
+    document.getElementById('lock-password-input').focus();
+  }
+};
+
+document.getElementById('lock-modal').addEventListener('click',function(e){if(e.target===this)closeLockModal();});
+document.getElementById('lock-password-input').addEventListener('keydown',function(e){
+  if(e.key==='Enter') confirmLock();
+});
+document.getElementById('novo-skropivo-modal').addEventListener('click',function(e){if(e.target===this)closeNovoSkropivoModal();});
+document.getElementById('novo-skropivo-naziv').addEventListener('keydown',function(e){if(e.key==='Enter')confirmNovoSkropivo();});
+
+// ── INIT ─────────────────────────────────────────────
+(async function(){
+  await loadAll();
+  document.getElementById('loading').style.display='none';
+  initVnos();
+  applyLockState(); // start locked
+})();
+
+</script>
+</body>
+</html>
